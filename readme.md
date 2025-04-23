@@ -8,7 +8,9 @@
 const lc = new LuckyCafe(
   [
     {
-      fetch: async (continuationToken: string | undefined) => {
+      fetch: async (continuationToken: string | null) => {
+        // this provides dummy data asynchronously to show the ordering works
+        // usually this callback would call an API via fetch/axios etc.
         const first = parseInt(continuationToken ?? '1')
         const items: string[] = []
         for (let i = 0; i < 3; ++i) {
@@ -21,8 +23,10 @@ const lc = new LuckyCafe(
       fetchOrderField: (item: string) => item,
     },
     {
-      fetch: async (continuationToken: string | undefined) => {
+      fetch: async (continuationToken: string | null) => {
         const first = parseInt(continuationToken ?? '1')
+        // skip 4 to show the library can deal with it
+        if (first === 4) ++first
         const items: number[] = []
         for (let i = 0; i < 3; ++i) {
           items.push(first + i)
@@ -47,15 +51,15 @@ expect(items2).toEqual([2, '3', 3])
 expect(finished2).toEqual(false)
 
 const { items: items3, finished: finished3 } = await lc.fetchNextPage()
-expect(items3).toEqual(['4', 4, '5'])
+expect(items3).toEqual(['4', '5', 5])
 expect(finished3).toEqual(false)
 
 const { items: items4, finished: finished4 } = await lc.fetchNextPage()
-expect(items4).toEqual([5, '6', 6])
+expect(items4).toEqual(['6', 6, 7])
 expect(finished4).toEqual(false)
 
 const { items: items5, finished: finished5 } = await lc.fetchNextPage()
-expect(items5).toEqual([7, 8])
+expect(items5).toEqual([8])
 expect(finished5).toEqual(true)
 ```
 

@@ -22,6 +22,7 @@ describe('LuckyCafe', () => {
         {
           fetch: async (continuationToken: string | undefined) => {
             let first = parseInt(continuationToken ?? '1')
+            // skip 4 to show the library can deal with it
             if (first === 4) ++first
             const items: number[] = []
             for (let i = 0; i < 3; ++i) {
