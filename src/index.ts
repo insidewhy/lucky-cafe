@@ -1,5 +1,5 @@
 export interface LuckyCafeSourceConfig<T, U> {
-  fetch: (continuationToken: string | undefined) => Promise<{
+  fetch: (continuationToken: string | null) => Promise<{
     items: T[]
     continuationToken: string | null
   }>
@@ -55,7 +55,7 @@ export class LuckyCafe<
     if (!this.hasFirstPage) {
       await Promise.all(
         this.sources.map(async (source) => {
-          const { items, continuationToken } = await source.config.fetch(undefined)
+          const { items, continuationToken } = await source.config.fetch(null)
           if (!items.length) {
             this.sources = this.sources.filter((existingSource) => existingSource !== source)
           } else {
