@@ -21,7 +21,8 @@ describe('LuckyCafe', () => {
         },
         {
           fetch: async (continuationToken: string | undefined) => {
-            const first = parseInt(continuationToken ?? '1')
+            let first = parseInt(continuationToken ?? '1')
+            if (first === 4) ++first
             const items: number[] = []
             for (let i = 0; i < 3; ++i) {
               items.push(first + i)
@@ -46,15 +47,15 @@ describe('LuckyCafe', () => {
     expect(finished2).toEqual(false)
 
     const { items: items3, finished: finished3 } = await lc.fetchNextPage()
-    expect(items3).toEqual(['4', 4, '5'])
+    expect(items3).toEqual(['4', '5', 5])
     expect(finished3).toEqual(false)
 
     const { items: items4, finished: finished4 } = await lc.fetchNextPage()
-    expect(items4).toEqual([5, '6', 6])
+    expect(items4).toEqual(['6', 6, 7])
     expect(finished4).toEqual(false)
 
     const { items: items5, finished: finished5 } = await lc.fetchNextPage()
-    expect(items5).toEqual([7, 8])
+    expect(items5).toEqual([8])
     expect(finished5).toEqual(true)
   })
 })
