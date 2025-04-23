@@ -1,6 +1,7 @@
 # lucky-cafe
 
-`lucky-cafe` is a library for iterating through multiple sources of paginated data, ensuring that the items are delivered according to a well defined ordering and the minimum number of API requests possible are made.
+`lucky-cafe` is a library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources.
+It returns items according to a well defined ordering function and ensures API requests are made lazily (as and when they are needed).
 
 ## Example
 
@@ -19,7 +20,6 @@ const lc = new LuckyCafe(
         const nextContinuationToken = first + 3 >= 6 ? null : (first + 3).toString()
         return { items, continuationToken: nextContinuationToken }
       },
-      pageSize: 5,
       fetchOrderField: (item: string) => item,
     },
     {
@@ -35,7 +35,6 @@ const lc = new LuckyCafe(
         const nextContinuationToken = first + 3 >= 9 ? null : (first + 3).toString()
         return { items, continuationToken: nextContinuationToken }
       },
-      pageSize: 3,
       fetchOrderField: (item: number) => item.toString(),
     },
   ],
@@ -63,9 +62,7 @@ expect(items5).toEqual([8])
 expect(finished5).toEqual(true)
 ```
 
-The `pageSize` for each source is used to tell `lucky-cafe` how many items will be returned by each page request.
-
-The global `pageSize` config determines how many items should be returned by each call to `fextNextPage`.
+The `pageSize` config determines how many items should be returned by each call to `fextNextPage`.
 
 The `fetch` callbacks must return an object with an `items` field and a `continuationToken` string (or `null` when there is no continuation token i.e. there are no more pages).
 If the API does not return data in this format a wrapper function can be used around the call which retrieves the data.

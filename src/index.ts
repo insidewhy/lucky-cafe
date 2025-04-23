@@ -4,8 +4,6 @@ export interface LuckyCafeSourceConfig<T, U> {
     continuationToken: string | null
   }>
 
-  pageSize: number
-
   fetchOrderField: (result: T) => U
 }
 

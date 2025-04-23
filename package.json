@@ -1,7 +1,7 @@
 {
   "name": "lucky-cafe",
-  "version": "0.2.0",
-  "description": "Paginate through multiple sources",
+  "version": "0.3.0",
+  "description": "typescript library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources",
   "type": "module",
   "main": "dist/index.js",
   "exports": {
