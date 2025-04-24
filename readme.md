@@ -20,7 +20,7 @@ const lc = new LuckyCafe(
         const nextContinuationToken = first + 3 >= 6 ? null : (first + 3).toString()
         return { items, continuationToken: nextContinuationToken }
       },
-      fetchOrderField: (item: string) => item,
+      getOrderField: (item: string) => item,
     },
     {
       fetch: async (continuationToken: string | null) => {
@@ -35,7 +35,7 @@ const lc = new LuckyCafe(
         const nextContinuationToken = first + 3 >= 9 ? null : (first + 3).toString()
         return { items, continuationToken: nextContinuationToken }
       },
-      fetchOrderField: (item: number) => item.toString(),
+      getOrderField: (item: number) => item.toString(),
     },
   ],
   { pageSize: 3 },
@@ -67,6 +67,6 @@ The `pageSize` config determines how many items should be returned by each call 
 The `fetch` callbacks must return an object with an `items` field and a `continuationToken` string (or `null` when there is no continuation token i.e. there are no more pages).
 If the API does not return data in this format a wrapper function can be used around the call which retrieves the data.
 
-`fetchOrderField` is used to grab a field from the page items, this item is compared to other order fields using `<` to determine the ordering of the data in the pages returned by `fetchNextPage`.
+`getOrderField` is used to grab a field from the page items, this item is compared to other order fields using `<` to determine the ordering of the data in the pages returned by `fetchNextPage`.
 
 It may be useful to know which source each item came from, when this is needed add this field via the `fetch` function, creating a wrapper as needed if the existing fetch function does not contain this data.

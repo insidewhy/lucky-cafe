@@ -4,7 +4,7 @@ export interface LuckyCafeSourceConfig<T, U> {
     continuationToken: string | null
   }>
 
-  fetchOrderField: (result: T) => U
+  getOrderField: (result: T) => U
 }
 
 export interface LuckyCafeConfig {
@@ -91,7 +91,7 @@ export class LuckyCafe<
           }
         }
 
-        const queueHead = source.queue[0]!
+        const queueHead = source.config.getOrderField(source.queue[0]!)
         if (!maxQueueHead || queueHead < maxQueueHead) {
           maxQueueHead = queueHead
           maxSource = source
