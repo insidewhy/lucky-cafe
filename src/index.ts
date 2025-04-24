@@ -111,8 +111,14 @@ export class LuckyCafe<
 
       if (!maxSource) break
       this.currentPage.push(maxSource.queue.shift())
+      if (!maxSource.queue.length && !maxSource.continuationToken) {
+        this.sources = this.sources.filter((existingSource) => existingSource !== maxSource)
+      }
     }
 
-    return { items: this.currentPage.splice(0), finished: !this.sources.length }
+    return {
+      items: this.currentPage.splice(0),
+      finished: !this.sources.length,
+    }
   }
 }

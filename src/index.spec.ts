@@ -113,10 +113,6 @@ describe('LuckyCafe', () => {
 
     const { items: items4, finished: finished4 } = await lc.fetchNextPage()
     expect(items4).toEqual([{ id: 3 }, { id: '2' }, { id: '1' }])
-    expect(finished4).toEqual(false)
-
-    const { items: items5, finished: finished5 } = await lc.fetchNextPage()
-    expect(items5).toEqual([])
-    expect(finished5).toEqual(true)
+    expect(finished4).toEqual(true)
   })
 })
