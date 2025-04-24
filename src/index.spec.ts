@@ -16,7 +16,7 @@ describe('LuckyCafe', () => {
             const nextContinuationToken = first + 3 >= 6 ? null : (first + 3).toString()
             return { items, continuationToken: nextContinuationToken }
           },
-          fetchOrderField: (item: string) => item,
+          getOrderField: (item: string) => item,
         },
         {
           fetch: async (continuationToken: string | undefined) => {
@@ -31,7 +31,7 @@ describe('LuckyCafe', () => {
             const nextContinuationToken = first + 3 >= 9 ? null : (first + 3).toString()
             return { items, continuationToken: nextContinuationToken }
           },
-          fetchOrderField: (item: number) => item.toString(),
+          getOrderField: (item: number) => item.toString(),
         },
       ],
       { pageSize: 3 },
