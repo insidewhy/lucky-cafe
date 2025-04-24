@@ -1,6 +1,6 @@
 {
   "name": "lucky-cafe",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "typescript library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources",
   "type": "module",
   "main": "dist/index.js",
@@ -32,13 +32,10 @@
   ],
   "author": "insidewhy",
   "license": "MIT",
-  "dependencies": {
-    "@actions/core": "1.11.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@eslint/compat": "^1.2.2",
     "@eslint/js": "^9.14.0",
-    "@octokit/rest": "^21.0.2",
     "@types/node": "22.14.1",
     "@typescript-eslint/parser": "^8.13.0",
     "eslint": "9.25.1",
