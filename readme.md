@@ -68,5 +68,6 @@ The `fetch` callbacks must return an object with an `items` field and a `continu
 If the API does not return data in this format a wrapper function can be used around the call which retrieves the data.
 
 `getOrderField` is used to grab a field from the page items, this item is compared to other order fields using `<` to determine the ordering of the data in the pages returned by `fetchNextPage`.
+The config option `descending` can be set to `true` to compare order fields with `>` instead of `<`.
 
 It may be useful to know which source each item came from, when this is needed add this field via the `fetch` function, creating a wrapper as needed if the existing fetch function does not contain this data.

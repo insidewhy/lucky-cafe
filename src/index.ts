@@ -9,6 +9,7 @@ export interface LuckyCafeSourceConfig<T, U> {
 
 export interface LuckyCafeConfig {
   pageSize: number
+  descending?: boolean
 }
 
 interface LuckyCafeSource {
@@ -21,7 +22,7 @@ interface LuckyCafeSource {
   queue: any[]
 }
 
-interface LuckyCafeResult<T> {
+export interface LuckyCafeResult<T> {
   items: T[]
   finished: boolean
 }
@@ -92,7 +93,10 @@ export class LuckyCafe<
         }
 
         const queueHead = source.config.getOrderField(source.queue[0]!)
-        if (!maxQueueHead || queueHead < maxQueueHead) {
+        if (
+          !maxQueueHead ||
+          (this.config.descending ? queueHead > maxQueueHead : queueHead < maxQueueHead)
+        ) {
           maxQueueHead = queueHead
           maxSource = source
         }
