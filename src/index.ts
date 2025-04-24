@@ -37,6 +37,11 @@ export class LuckyCafe<
 
   hasFirstPage = false
 
+  // the current page is usually populated and then fully drained by fetchNextPage() but
+  // if a fetch throws an error it's important to keep it stored as a member so a future
+  // call to fetchNextPage() can resume from where it left off
+  currentPage: Array<T | Awaited<ReturnType<V[number]['fetch']>>['items']> = []
+
   constructor(
     sourceConfigs: [LuckyCafeSourceConfig<T, U>, ...V],
     private config: LuckyCafeConfig,
@@ -54,6 +59,10 @@ export class LuckyCafe<
     if (!this.hasFirstPage) {
       await Promise.all(
         this.sources.map(async (source) => {
+          // if an exception was thrown before when fetching the first pages then the
+          // queue may have been populated for some sources
+          if (source.queue.length) return
+
           const { items, continuationToken } = await source.config.fetch(null)
           if (!items.length) {
             this.sources = this.sources.filter((existingSource) => existingSource !== source)
@@ -66,9 +75,7 @@ export class LuckyCafe<
       this.hasFirstPage = true
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items: any[] = []
-    while (items.length < this.config.pageSize) {
+    while (this.currentPage.length < this.config.pageSize) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let maxQueueHead: any | undefined = undefined
       let maxSource: LuckyCafeSource | undefined = undefined
@@ -103,9 +110,9 @@ export class LuckyCafe<
       }
 
       if (!maxSource) break
-      items.push(maxSource.queue.shift())
+      this.currentPage.push(maxSource.queue.shift())
     }
 
-    return { items, finished: !this.sources.length }
+    return { items: this.currentPage.splice(0), finished: !this.sources.length }
   }
 }
