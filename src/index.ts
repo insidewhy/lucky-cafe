@@ -35,7 +35,7 @@ export class LuckyCafe<
 > {
   sources: LuckyCafeSource[]
 
-  hasFirstPage = false
+  hasFirstPages = false
 
   // the current page is usually populated and then fully drained by fetchNextPage() but
   // if a fetch throws an error it's important to keep it stored as a member so a future
@@ -56,11 +56,12 @@ export class LuckyCafe<
   async fetchNextPage(): Promise<
     LuckyCafeResult<T | Awaited<ReturnType<V[number]['fetch']>>['items']>
   > {
-    if (!this.hasFirstPage) {
+    if (!this.hasFirstPages) {
+      // the first pages can be populated in parallel
       await Promise.all(
         this.sources.map(async (source) => {
-          // if an exception was thrown before when fetching the first pages then the
-          // queue may have been populated for some sources
+          // if an exception was thrown on a previous call to fetchNextPage when fetching
+          // the first pages then the queue may have been populated for some sources
           if (source.queue.length) return
 
           const { items, continuationToken } = await source.config.fetch(null)
@@ -72,13 +73,13 @@ export class LuckyCafe<
           }
         }),
       )
-      this.hasFirstPage = true
+      this.hasFirstPages = true
     }
 
     while (this.currentPage.length < this.config.pageSize) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let maxQueueHead: any | undefined = undefined
-      let maxSource: LuckyCafeSource | undefined = undefined
+      let nextPageItem: any | undefined = undefined
+      let nextSource: LuckyCafeSource | undefined = undefined
 
       if (!this.sources.length) break
 
@@ -99,20 +100,23 @@ export class LuckyCafe<
           }
         }
 
-        const queueHead = source.config.getOrderField(source.queue[0]!)
+        const queueHead = source.config.getOrderField(source.queue[0])
         if (
-          !maxQueueHead ||
-          (this.config.descending ? queueHead > maxQueueHead : queueHead < maxQueueHead)
+          !nextPageItem ||
+          (this.config.descending ? queueHead > nextPageItem : queueHead < nextPageItem)
         ) {
-          maxQueueHead = queueHead
-          maxSource = source
+          nextPageItem = queueHead
+          nextSource = source
         }
       }
 
-      if (!maxSource) break
-      this.currentPage.push(maxSource.queue.shift())
-      if (!maxSource.queue.length && !maxSource.continuationToken) {
-        this.sources = this.sources.filter((existingSource) => existingSource !== maxSource)
+      if (!nextSource) break
+
+      this.currentPage.push(nextSource.queue.shift())
+      nextPageItem = undefined
+
+      if (!nextSource.queue.length && !nextSource.continuationToken) {
+        this.sources = this.sources.filter((existingSource) => existingSource !== nextSource)
       }
     }
 
