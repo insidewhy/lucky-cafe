@@ -33,24 +33,31 @@ export class LuckyCafe<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   V extends readonly LuckyCafeSourceConfig<any, U>[],
 > {
-  sources: LuckyCafeSource[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private readonly sourceConfigs: Array<LuckyCafeSourceConfig<any, any>>
+  private sources: LuckyCafeSource[]
 
-  hasFirstPages = false
+  private hasFirstPages = false
 
   // the current page is usually populated and then fully drained by fetchNextPage() but
   // if a fetch throws an error it's important to keep it stored as a member so a future
   // call to fetchNextPage() can resume from where it left off
-  currentPage: Array<T | Awaited<ReturnType<V[number]['fetch']>>['items']> = []
+  private currentPage: Array<T | Awaited<ReturnType<V[number]['fetch']>>['items']> = []
+
+  private createSourcesFromConfigs(): LuckyCafeSource[] {
+    return this.sourceConfigs.map((config) => ({
+      config,
+      continuationToken: null,
+      queue: [],
+    }))
+  }
 
   constructor(
     sourceConfigs: [LuckyCafeSourceConfig<T, U>, ...V],
     private config: LuckyCafeConfig,
   ) {
-    this.sources = sourceConfigs.map((config) => ({
-      config,
-      continuationToken: null,
-      queue: [],
-    }))
+    this.sourceConfigs = sourceConfigs
+    this.sources = this.createSourcesFromConfigs()
   }
 
   async fetchNextPage(): Promise<
@@ -124,5 +131,11 @@ export class LuckyCafe<
       items: this.currentPage.splice(0),
       finished: !this.sources.length,
     }
+  }
+
+  reset(): void {
+    this.sources = this.createSourcesFromConfigs()
+    this.hasFirstPages = false
+    this.currentPage.length = 0
   }
 }

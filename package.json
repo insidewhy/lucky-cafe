@@ -1,6 +1,6 @@
 {
   "name": "lucky-cafe",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "typescript library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources",
   "type": "module",
   "main": "dist/index.js",
