@@ -62,12 +62,17 @@ expect(items5).toEqual([8])
 expect(finished5).toEqual(true)
 ```
 
-The `pageSize` config determines how many items should be returned by each call to `fextNextPage`.
+The `pageSize` configuration determines how many items should be returned by each call to `fextNextPage`.
 
-The `fetch` callbacks must return an object with an `items` field and a `continuationToken` string (or `null` when there is no continuation token i.e. there are no more pages).
-If the API does not return data in this format a wrapper function can be used around the call which retrieves the data.
+The `fetch` callbacks must return an object with an `items` array and a `continuationToken` string (or `null` when there is no continuation token i.e. there are no more pages).
+For each source, the continuation token returned by `fetch` will be passed to the subsequent call and a `continuationToken` of `null` will signal that the last page has been reached, after which `fetch` will not be called again (unless `reset()` is used).
+Some APIs return a non-null continuation token even though the next call will fetch an empty page of data, this situation is also handled by this library and is taken as a signal that the last page has been reached.
+If the underlying API does not return data in the `items`/`continuationToken` format a wrapper function can be used to adapt the data according to the interface of this library.
 
 `getOrderField` is used to grab a field from the page items, this item is compared to other order fields using `<` to determine the ordering of the data in the pages returned by `fetchNextPage`.
-The config option `descending` can be set to `true` to compare order fields with `>` instead of `<`.
+The configuration option `descending` can be set to `true` to compare order fields with `>` instead of `<`.
 
 It may be useful to know which source each item came from, when this is needed add this field via the `fetch` function, creating a wrapper as needed if the existing fetch function does not contain this data.
+
+The method `reset` can be used to reset the state stored by the class while maintaining the source configurations.
+After this the next call to `fetchNextPage` will start paginating from the beginning of all sources.
