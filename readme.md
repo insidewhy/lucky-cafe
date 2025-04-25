@@ -13,26 +13,28 @@ const lc = new LuckyCafe(
         // this provides dummy data asynchronously to show the ordering works
         // usually this callback would call an API via fetch/axios etc.
         const first = parseInt(continuationToken ?? '1')
+        const limit = first + 3
         const items: string[] = []
-        for (let i = 0; i < 3; ++i) {
-          items.push((first + i).toString())
+        for (let i = first; i < limit; ++i) {
+          items.push(i.toString())
         }
-        const nextContinuationToken = first + 3 >= 6 ? null : (first + 3).toString()
+        const nextContinuationToken = limit >= 6 ? null : (first + 3).toString()
         return { items, continuationToken: nextContinuationToken }
       },
       getOrderField: (item: string) => item,
     },
     {
       fetch: async (continuationToken: string | null) => {
-        const first = parseInt(continuationToken ?? '1')
+        let first = parseInt(continuationToken ?? '1')
         // skip 4 to show the library can deal with it
         if (first === 4) ++first
+        const limit = first + 3
         const items: number[] = []
-        for (let i = 0; i < 3; ++i) {
-          items.push(first + i)
-          if (first + i === 8) break
+        for (let i = first; i < limit; ++i) {
+          items.push(i)
+          if (i === 8) break
         }
-        const nextContinuationToken = first + 3 >= 9 ? null : (first + 3).toString()
+        const nextContinuationToken = limit >= 9 ? null : limit.toString()
         return { items, continuationToken: nextContinuationToken }
       },
       getOrderField: (item: number) => item.toString(),

@@ -9,11 +9,12 @@ describe('LuckyCafe', () => {
         {
           fetch: async (continuationToken: string | null) => {
             const first = parseInt(continuationToken ?? '1')
+            const limit = first + 3
             const items: string[] = []
-            for (let i = 0; i < 3; ++i) {
-              items.push((first + i).toString())
+            for (let i = first; i < limit; ++i) {
+              items.push(i.toString())
             }
-            const nextContinuationToken = first + 3 >= 6 ? null : (first + 3).toString()
+            const nextContinuationToken = limit >= 6 ? null : (first + 3).toString()
             return { items, continuationToken: nextContinuationToken }
           },
           getOrderField: (item: string) => item,
@@ -23,12 +24,13 @@ describe('LuckyCafe', () => {
             let first = parseInt(continuationToken ?? '1')
             // skip 4 to show the library can deal with it
             if (first === 4) ++first
+            const limit = first + 3
             const items: number[] = []
-            for (let i = 0; i < 3; ++i) {
-              items.push(first + i)
-              if (first + i === 8) break
+            for (let i = first; i < limit; ++i) {
+              items.push(i)
+              if (i === 8) break
             }
-            const nextContinuationToken = first + 3 >= 9 ? null : (first + 3).toString()
+            const nextContinuationToken = limit >= 9 ? null : limit.toString()
             return { items, continuationToken: nextContinuationToken }
           },
           getOrderField: (item: number) => item.toString(),
@@ -114,5 +116,74 @@ describe('LuckyCafe', () => {
     const { items: items4, finished: finished4 } = await lc.fetchNextPage()
     expect(items4).toEqual([{ id: 3 }, { id: '2' }, { id: '1' }])
     expect(finished4).toEqual(true)
+
+    // ensure that calling fetchNextPage again after already finished returns an empty
+    // page and finished = true again
+    const { items: items5, finished: finished5 } = await lc.fetchNextPage()
+    expect(items5).toEqual([])
+    expect(finished5).toEqual(true)
+  })
+
+  it('can paginate through a single source that ends on a page boundary', async () => {
+    const lc = new LuckyCafe(
+      [
+        {
+          fetch: async (continuationToken: string | null) => {
+            const first = parseInt(continuationToken ?? '1')
+            const limit = first + 3
+            const items: number[] = []
+            for (let i = first; i < limit; ++i) {
+              items.push(i)
+            }
+            const nextContinuationToken = limit >= 6 ? null : (first + 3).toString()
+            return { items, continuationToken: nextContinuationToken }
+          },
+          getOrderField: (item) => item.toString(),
+        },
+      ],
+      { pageSize: 3 },
+    )
+
+    const { items, finished } = await lc.fetchNextPage()
+    expect(items).toEqual([1, 2, 3])
+    expect(finished).toEqual(false)
+
+    const { items: items2, finished: finished2 } = await lc.fetchNextPage()
+    expect(items2).toEqual([4, 5, 6])
+    expect(finished2).toEqual(true)
+  })
+
+  it('can paginate through a single source that ends after a page boundary', async () => {
+    const lc = new LuckyCafe(
+      [
+        {
+          fetch: async (continuationToken: string | null) => {
+            const first = parseInt(continuationToken ?? '1')
+            const limit = first + 3
+            const items: number[] = []
+            for (let i = first; i < limit; ++i) {
+              items.push(i)
+              if (i === 7) break
+            }
+            const nextContinuationToken = limit >= 9 ? null : (first + 3).toString()
+            return { items, continuationToken: nextContinuationToken }
+          },
+          getOrderField: (item) => item.toString(),
+        },
+      ],
+      { pageSize: 3 },
+    )
+
+    const { items, finished } = await lc.fetchNextPage()
+    expect(items).toEqual([1, 2, 3])
+    expect(finished).toEqual(false)
+
+    const { items: items2, finished: finished2 } = await lc.fetchNextPage()
+    expect(items2).toEqual([4, 5, 6])
+    expect(finished2).toEqual(false)
+
+    const { items: items3, finished: finished3 } = await lc.fetchNextPage()
+    expect(items3).toEqual([7])
+    expect(finished3).toEqual(true)
   })
 })

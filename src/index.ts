@@ -83,12 +83,48 @@ export class LuckyCafe<
       this.hasFirstPages = true
     }
 
+    if (!this.sources.length) {
+      return { items: [], finished: true }
+    }
+
     while (this.currentPage.length < this.config.pageSize) {
+      if (this.sources.length === 1) {
+        const source = this.sources[0]
+        if (source.queue.length) {
+          this.currentPage.push(
+            ...source.queue.splice(0, this.config.pageSize - this.currentPage.length),
+          )
+
+          if (!source.queue.length && !source.continuationToken) {
+            this.sources.length = 0
+            break
+          }
+
+          if (this.currentPage.length === this.config.pageSize) {
+            break
+          }
+        }
+
+        const { items, continuationToken } = await source.config.fetch(source.continuationToken)
+        if (!items.length) {
+          this.sources.length = 0
+          break
+        }
+
+        this.currentPage.push(...items.splice(0, this.config.pageSize - this.currentPage.length))
+        if (!items.length && !continuationToken) {
+          this.sources.length = 0
+          break
+        }
+
+        source.continuationToken = continuationToken
+        source.queue = items
+        continue
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let nextPageItem: any | undefined = undefined
       let nextSource: LuckyCafeSource | undefined = undefined
-
-      if (!this.sources.length) break
 
       for (const source of this.sources) {
         if (!source.queue.length) {
@@ -124,13 +160,11 @@ export class LuckyCafe<
 
       if (!nextSource.queue.length && !nextSource.continuationToken) {
         this.sources = this.sources.filter((existingSource) => existingSource !== nextSource)
+        if (!this.sources.length) break
       }
     }
 
-    return {
-      items: this.currentPage.splice(0),
-      finished: !this.sources.length,
-    }
+    return { items: this.currentPage.splice(0), finished: !this.sources.length }
   }
 
   reset(): void {
