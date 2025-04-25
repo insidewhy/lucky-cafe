@@ -1,7 +1,7 @@
 # lucky-cafe
 
 `lucky-cafe` is a library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources.
-It returns items according to a well defined ordering function and ensures API requests are made lazily (as and when they are needed).
+It interleaves items from all sources according to an ordering configuration and ensures API requests are made lazily (as and when they are needed).
 
 ## Example
 
