@@ -1,10 +1,10 @@
-export interface LuckyCafeSourceConfig<T, U> {
+export interface LuckyCafeSourceConfig<ItemT, OrderT> {
   fetch: (continuationToken: string | null) => Promise<{
-    items: T[]
+    items: ItemT[]
     continuationToken: string | null
   }>
 
-  getOrderField: (result: T) => U
+  getOrderField: (result: ItemT) => OrderT
 }
 
 export interface LuckyCafeConfig {
@@ -22,21 +22,19 @@ interface LuckyCafeSource {
   queue: any[]
 }
 
-export interface LuckyCafeResult<T> {
-  items: T[]
+export interface LuckyCafeResult<ItemT> {
+  items: ItemT[]
   finished: boolean
 }
 
-type ArrayType<T> = T extends Array<infer U> ? U : never
+type ArrayType<ItemT> = ItemT extends Array<infer OrderT> ? OrderT : never
 
 export class LuckyCafe<
-  T,
-  U,
+  ItemT,
+  OrderT,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  V extends readonly LuckyCafeSourceConfig<any, U>[],
+  V extends readonly LuckyCafeSourceConfig<any, OrderT>[],
 > {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private readonly sourceConfigs: Array<LuckyCafeSourceConfig<any, any>>
   private sources: LuckyCafeSource[]
 
   private hasFirstPages = false
@@ -44,7 +42,8 @@ export class LuckyCafe<
   // the current page is usually populated and then fully drained by fetchNextPage() but
   // if a fetch throws an error it's important to keep it stored as a member so a future
   // call to fetchNextPage() can resume from where it left off
-  private currentPage: Array<T | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>> = []
+  private currentPage: Array<ItemT | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>> =
+    []
 
   private createSourcesFromConfigs(): LuckyCafeSource[] {
     return this.sourceConfigs.map((config) => ({
@@ -55,10 +54,9 @@ export class LuckyCafe<
   }
 
   constructor(
-    sourceConfigs: [LuckyCafeSourceConfig<T, U>, ...V],
+    private readonly sourceConfigs: [LuckyCafeSourceConfig<ItemT, OrderT>, ...V],
     private config: LuckyCafeConfig,
   ) {
-    this.sourceConfigs = sourceConfigs
     this.sources = this.createSourcesFromConfigs()
   }
 
@@ -67,7 +65,7 @@ export class LuckyCafe<
   }
 
   async fetchNextPage(): Promise<
-    LuckyCafeResult<T | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>>
+    LuckyCafeResult<ItemT | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>>
   > {
     if (!this.hasFirstPages) {
       // the first pages can be populated in parallel
