@@ -41,6 +41,8 @@ export type MakeLuckyCafe<ItemsT extends unknown[], OrderT> = LuckyCafe<
   MakeSourceConfig<Tail<ItemsT>, OrderT>
 >
 
+export class LuckyCafeCancelled {}
+
 export class LuckyCafe<
   ItemT,
   OrderT,
@@ -49,6 +51,7 @@ export class LuckyCafe<
 > {
   private sources: LuckyCafeSource[]
 
+  private resetCount = 0
   private hasFirstPages = false
 
   // the current page is usually populated and then fully drained by fetchNextPage() but
@@ -79,6 +82,8 @@ export class LuckyCafe<
   async fetchNextPage(): Promise<
     LuckyCafeResult<ItemT | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>>
   > {
+    const { resetCount } = this
+
     if (!this.hasFirstPages) {
       // the first pages can be populated in parallel
       await Promise.all(
@@ -88,6 +93,8 @@ export class LuckyCafe<
           if (source.queue.length) return
 
           const { items, continuationToken } = await source.config.fetch(null)
+          if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
+
           if (!items.length) {
             this.sources = this.sources.filter((existingSource) => existingSource !== source)
           } else {
@@ -98,6 +105,8 @@ export class LuckyCafe<
       )
       this.hasFirstPages = true
     }
+
+    if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
 
     if (!this.sources.length) {
       return { items: [], finished: true }
@@ -122,6 +131,7 @@ export class LuckyCafe<
         }
 
         const { items, continuationToken } = await source.config.fetch(source.continuationToken)
+        if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
         if (!items.length) {
           this.sources.length = 0
           break
@@ -149,6 +159,7 @@ export class LuckyCafe<
             continue
           } else {
             const { items, continuationToken } = await source.config.fetch(source.continuationToken)
+            if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
             if (!items.length) {
               this.sources = this.sources.filter((existingSource) => existingSource !== source)
               continue
@@ -184,6 +195,7 @@ export class LuckyCafe<
   }
 
   reset(): void {
+    ++this.resetCount
     this.sources = this.createSourcesFromConfigs()
     this.hasFirstPages = false
     this.currentPage.length = 0

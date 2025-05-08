@@ -77,3 +77,4 @@ It may be useful to know which source each item came from, when this is needed a
 
 The method `reset` can be used to reset the state stored by the class while maintaining the source configurations.
 After this the next call to `fetchNextPage` will start paginating from the beginning of all sources.
+If there are any pending calls to `fetchNextPage` when `reset` is called, they will eventually throw a class of instance `LuckyCafeCancelled`.
