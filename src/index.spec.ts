@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { LuckyCafe } from '.'
+import { LuckyCafe, MakeLuckyCafe } from '.'
 
 describe('LuckyCafe', () => {
   it('can paginate through multiple sources in ascending order according to getOrderField', async () => {
@@ -70,7 +70,7 @@ describe('LuckyCafe', () => {
       id: number
     }
 
-    const lc = new LuckyCafe(
+    const lc: MakeLuckyCafe<[StringItem, IntItem], string> = new LuckyCafe(
       [
         {
           fetch: async (continuationToken: string | null) => {

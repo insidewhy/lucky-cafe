@@ -29,6 +29,18 @@ export interface LuckyCafeResult<ItemT> {
 
 type ArrayType<ItemT> = ItemT extends Array<infer OrderT> ? OrderT : never
 
+type Tail<T extends unknown[]> = T extends [unknown, ...infer Rest] ? Rest : never
+
+type MakeSourceConfig<T extends unknown[], OrderT> = {
+  [K in keyof T]: LuckyCafeSourceConfig<T[K], OrderT>
+}
+
+export type MakeLuckyCafe<ItemsT extends unknown[], OrderT> = LuckyCafe<
+  ItemsT['0'],
+  OrderT,
+  MakeSourceConfig<Tail<ItemsT>, OrderT>
+>
+
 export class LuckyCafe<
   ItemT,
   OrderT,
