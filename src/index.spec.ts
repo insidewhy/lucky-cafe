@@ -14,7 +14,7 @@ describe('LuckyCafe', () => {
             for (let i = first; i < limit; ++i) {
               items.push(i.toString())
             }
-            const nextContinuationToken = limit >= 6 ? null : (first + 3).toString()
+            const nextContinuationToken = limit >= 6 ? null : limit.toString()
             return { items, continuationToken: nextContinuationToken }
           },
           getOrderField: (item: string) => item,
@@ -54,10 +54,12 @@ describe('LuckyCafe', () => {
     const { items: items4, finished: finished4 } = await lc.fetchNextPage()
     expect(items4).toEqual(['6', 6, 7])
     expect(finished4).toEqual(false)
+    expect(lc.finished()).toEqual(false)
 
     const { items: items5, finished: finished5 } = await lc.fetchNextPage()
     expect(items5).toEqual([8])
     expect(finished5).toEqual(true)
+    expect(lc.finished()).toEqual(true)
   })
 
   it('can paginate through multiple sources in descending order according to getOrderField', async () => {

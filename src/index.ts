@@ -27,6 +27,8 @@ export interface LuckyCafeResult<T> {
   finished: boolean
 }
 
+type ArrayType<T> = T extends Array<infer U> ? U : never
+
 export class LuckyCafe<
   T,
   U,
@@ -42,7 +44,7 @@ export class LuckyCafe<
   // the current page is usually populated and then fully drained by fetchNextPage() but
   // if a fetch throws an error it's important to keep it stored as a member so a future
   // call to fetchNextPage() can resume from where it left off
-  private currentPage: Array<T | Awaited<ReturnType<V[number]['fetch']>>['items']> = []
+  private currentPage: Array<T | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>> = []
 
   private createSourcesFromConfigs(): LuckyCafeSource[] {
     return this.sourceConfigs.map((config) => ({
@@ -60,8 +62,12 @@ export class LuckyCafe<
     this.sources = this.createSourcesFromConfigs()
   }
 
+  finished(): boolean {
+    return !this.sources.length
+  }
+
   async fetchNextPage(): Promise<
-    LuckyCafeResult<T | Awaited<ReturnType<V[number]['fetch']>>['items']>
+    LuckyCafeResult<T | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>>
   > {
     if (!this.hasFirstPages) {
       // the first pages can be populated in parallel
