@@ -1,7 +1,6 @@
 # lucky-cafe
 
-`lucky-cafe` is a library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources.
-It interleaves items from all sources according to an ordering configuration and ensures API requests are made lazily (as and when they are needed).
+`lucky-cafe` is a library for retrieving ordered interleaved pages of items from multiple asynchronous paginated sources, ensuring API requests are made lazily (as and when they are needed).
 
 ## Example
 
@@ -18,7 +17,7 @@ const lc = new LuckyCafe(
         for (let i = first; i < limit; ++i) {
           items.push(i.toString())
         }
-        const nextContinuationToken = limit >= 6 ? null : (first + 3).toString()
+        const nextContinuationToken = limit >= 6 ? null : limit.toString()
         return { items, continuationToken: nextContinuationToken }
       },
       getOrderField: (item: string) => item,
