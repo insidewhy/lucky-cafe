@@ -67,6 +67,7 @@ The `pageSize` configuration determines how many items should be returned by eac
 
 The `fetch` callbacks must return an object with an `items` array and a `continuationToken` string (or `null` when there is no continuation token i.e. there are no more pages).
 For each source, the continuation token returned by `fetch` will be passed to the subsequent call and a `continuationToken` of `null` will signal that the last page has been reached, after which `fetch` will not be called again (unless `reset()` is used).
+The `fetch` callbacks take an `AbortSignal` argument as their second parameter, but this does not have to be used.
 Some APIs return a non-null continuation token even though the next call will fetch an empty page of data, this situation is also handled by this library and is taken as a signal that the last page has been reached.
 If the underlying API does not return data in the `items`/`continuationToken` format a wrapper function can be used to adapt the data according to the interface of this library.
 
@@ -75,6 +76,58 @@ The configuration option `descending` can be set to `true` to compare order fiel
 
 It may be useful to know which source each item came from, when this is needed add this field via the `fetch` function, creating a wrapper as needed if the existing fetch function does not contain this data.
 
+## Resetting pagination state
+
 The method `reset` can be used to reset the state stored by the class while maintaining the source configurations.
 After this the next call to `fetchNextPage` will start paginating from the beginning of all sources.
-If there are any pending calls to `fetchNextPage` when `reset` is called, they will eventually throw a class of instance `LuckyCafeCancelled`.
+If there are any pending calls to `fetchNextPage` when `reset` is called they will eventually throw a class of instance `LuckyCafeCancelled` and the `abort()` method of the `AbortController` associated with the requests will be called.
+
+The following shows how abort signals can be used to cancel pending HTTP requests on reset:
+
+```typescript
+interface Kitten {
+  id: string
+  name: string
+}
+
+interface Puppy {
+  id: string
+  name: string
+  loudness: number
+}
+
+const lc = new LuckyCafe(
+  [
+    {
+      fetch: async (continuationToken: string | null, signal: AbortSignal) => {
+        return axios.get<{
+          items: Kitten[]
+          continuationToken: string | null
+        }>('/kittens', { signal })
+      },
+      getOrderField: (item: Kitten) => item.name,
+    },
+    {
+      fetch: async (continuationToken: string | null, signal: AbortSignal) => {
+        return axios.get<{
+          items: Puppy[]
+          continuationToken: string | null
+        }>('/puppies', { signal })
+      },
+      getOrderField: (item: Puppy) => item.name,
+    },
+  ],
+  { pageSize: 20 },
+)
+
+// abort requests and reset state if both APIs do not return by 3 seconds
+const response = await Promise.race([
+  () => {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 3_000)
+    })
+    lc.reset()
+  },
+  lc.fetchNextPage(),
+])
+```

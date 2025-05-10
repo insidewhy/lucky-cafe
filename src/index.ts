@@ -1,5 +1,8 @@
 export interface LuckyCafeSourceConfig<ItemT, OrderT> {
-  fetch: (continuationToken: string | null) => Promise<{
+  fetch: (
+    continuationToken: string | null,
+    abortSignal: AbortSignal,
+  ) => Promise<{
     items: ItemT[]
     continuationToken: string | null
   }>
@@ -53,6 +56,7 @@ export class LuckyCafe<
 
   private resetCount = 0
   private hasFirstPages = false
+  private abortController: AbortController | undefined
 
   // the current page is usually populated and then fully drained by fetchNextPage() but
   // if a fetch throws an error it's important to keep it stored as a member so a future
@@ -82,119 +86,140 @@ export class LuckyCafe<
   async fetchNextPage(): Promise<
     LuckyCafeResult<ItemT | ArrayType<Awaited<ReturnType<V[number]['fetch']>>['items']>>
   > {
-    const { resetCount } = this
+    if (this.abortController) {
+      throw new Error('Should not call fetchNextPage while there are pending fetches')
+    }
+    try {
+      const abortController = (this.abortController = new AbortController())
+      const { resetCount } = this
 
-    if (!this.hasFirstPages) {
-      // the first pages can be populated in parallel
-      await Promise.all(
-        this.sources.map(async (source) => {
-          // if an exception was thrown on a previous call to fetchNextPage when fetching
-          // the first pages then the queue may have been populated for some sources
-          if (source.queue.length) return
+      if (!this.hasFirstPages) {
+        // the first pages can be populated in parallel
+        await Promise.all(
+          this.sources.map(async (source) => {
+            // if an exception was thrown on a previous call to fetchNextPage when fetching
+            // the first pages then the queue may have been populated for some sources
+            if (source.queue.length) return
 
-          const { items, continuationToken } = await source.config.fetch(null)
-          if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
+            const { items, continuationToken } = await source.config.fetch(
+              null,
+              abortController.signal,
+            )
+            if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
 
-          if (!items.length) {
-            this.sources = this.sources.filter((existingSource) => existingSource !== source)
-          } else {
-            source.queue = items
-            source.continuationToken = continuationToken
+            if (!items.length) {
+              this.sources = this.sources.filter((existingSource) => existingSource !== source)
+            } else {
+              source.queue = items
+              source.continuationToken = continuationToken
+            }
+          }),
+        )
+        this.hasFirstPages = true
+      }
+
+      if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
+
+      if (!this.sources.length) {
+        return { items: [], finished: true }
+      }
+
+      while (this.currentPage.length < this.config.pageSize) {
+        if (this.sources.length === 1) {
+          const source = this.sources[0]
+          if (source.queue.length) {
+            this.currentPage.push(
+              ...source.queue.splice(0, this.config.pageSize - this.currentPage.length),
+            )
+
+            if (!source.queue.length && !source.continuationToken) {
+              this.sources.length = 0
+              break
+            }
+
+            if (this.currentPage.length === this.config.pageSize) {
+              break
+            }
           }
-        }),
-      )
-      this.hasFirstPages = true
-    }
 
-    if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
-
-    if (!this.sources.length) {
-      return { items: [], finished: true }
-    }
-
-    while (this.currentPage.length < this.config.pageSize) {
-      if (this.sources.length === 1) {
-        const source = this.sources[0]
-        if (source.queue.length) {
-          this.currentPage.push(
-            ...source.queue.splice(0, this.config.pageSize - this.currentPage.length),
+          const { items, continuationToken } = await source.config.fetch(
+            source.continuationToken,
+            abortController.signal,
           )
-
-          if (!source.queue.length && !source.continuationToken) {
+          if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
+          if (!items.length) {
             this.sources.length = 0
             break
           }
 
-          if (this.currentPage.length === this.config.pageSize) {
+          this.currentPage.push(...items.splice(0, this.config.pageSize - this.currentPage.length))
+          if (!items.length && !continuationToken) {
+            this.sources.length = 0
             break
           }
+
+          source.continuationToken = continuationToken
+          source.queue = items
+          continue
         }
 
-        const { items, continuationToken } = await source.config.fetch(source.continuationToken)
-        if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
-        if (!items.length) {
-          this.sources.length = 0
-          break
-        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let nextPageItem: any | undefined = undefined
+        let nextSource: LuckyCafeSource | undefined = undefined
 
-        this.currentPage.push(...items.splice(0, this.config.pageSize - this.currentPage.length))
-        if (!items.length && !continuationToken) {
-          this.sources.length = 0
-          break
-        }
-
-        source.continuationToken = continuationToken
-        source.queue = items
-        continue
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let nextPageItem: any | undefined = undefined
-      let nextSource: LuckyCafeSource | undefined = undefined
-
-      for (const source of this.sources) {
-        if (!source.queue.length) {
-          if (!source.continuationToken) {
-            this.sources = this.sources.filter((existingSource) => existingSource !== source)
-            continue
-          } else {
-            const { items, continuationToken } = await source.config.fetch(source.continuationToken)
-            if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
-            if (!items.length) {
+        for (const source of this.sources) {
+          if (!source.queue.length) {
+            if (!source.continuationToken) {
               this.sources = this.sources.filter((existingSource) => existingSource !== source)
               continue
             } else {
-              source.queue.push(...items)
-              source.continuationToken = continuationToken
+              const { items, continuationToken } = await source.config.fetch(
+                source.continuationToken,
+                abortController.signal,
+              )
+              if (resetCount !== this.resetCount) throw new LuckyCafeCancelled()
+              if (!items.length) {
+                this.sources = this.sources.filter((existingSource) => existingSource !== source)
+                continue
+              } else {
+                source.queue.push(...items)
+                source.continuationToken = continuationToken
+              }
             }
+          }
+
+          const queueHead = source.config.getOrderField(source.queue[0])
+          if (
+            !nextPageItem ||
+            (this.config.descending ? queueHead > nextPageItem : queueHead < nextPageItem)
+          ) {
+            nextPageItem = queueHead
+            nextSource = source
           }
         }
 
-        const queueHead = source.config.getOrderField(source.queue[0])
-        if (
-          !nextPageItem ||
-          (this.config.descending ? queueHead > nextPageItem : queueHead < nextPageItem)
-        ) {
-          nextPageItem = queueHead
-          nextSource = source
+        if (!nextSource) break
+
+        this.currentPage.push(nextSource.queue.shift())
+        nextPageItem = undefined
+
+        if (!nextSource.queue.length && !nextSource.continuationToken) {
+          this.sources = this.sources.filter((existingSource) => existingSource !== nextSource)
+          if (!this.sources.length) break
         }
       }
 
-      if (!nextSource) break
-
-      this.currentPage.push(nextSource.queue.shift())
-      nextPageItem = undefined
-
-      if (!nextSource.queue.length && !nextSource.continuationToken) {
-        this.sources = this.sources.filter((existingSource) => existingSource !== nextSource)
-        if (!this.sources.length) break
-      }
+      return { items: this.currentPage.splice(0), finished: !this.sources.length }
+    } finally {
+      this.abortController = undefined
     }
-
-    return { items: this.currentPage.splice(0), finished: !this.sources.length }
   }
 
   reset(): void {
+    if (this.abortController) {
+      this.abortController.abort()
+      this.abortController = undefined
+    }
     ++this.resetCount
     this.sources = this.createSourcesFromConfigs()
     this.hasFirstPages = false
