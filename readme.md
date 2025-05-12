@@ -63,7 +63,7 @@ expect(items5).toEqual([8])
 expect(finished5).toEqual(true)
 ```
 
-The `pageSize` configuration determines how many items should be returned by each call to `fextNextPage`.
+The `pageSize` configuration determines how many items should be returned by each call to `fetchNextPage`.
 
 The `fetch` callbacks must return an object with an `items` array and a `continuationToken` string (or `null` when there is no continuation token i.e. there are no more pages).
 For each source, the continuation token returned by `fetch` will be passed to the subsequent call and a `continuationToken` of `null` will signal that the last page has been reached, after which `fetch` will not be called again (unless `reset()` is used).
@@ -120,14 +120,18 @@ const lc = new LuckyCafe(
   { pageSize: 20 },
 )
 
-// abort requests and reset state if both APIs do not return by 3 seconds
-const response = await Promise.race([
-  () => {
-    await new Promise((resolve) => {
-      setTimeout(resolve, 3_000)
-    })
-    lc.reset()
-  },
-  lc.fetchNextPage(),
-])
+// after 3 seconds reset the paginator, any pending requests will be aborted
+try {
+  const response = await Promise.race([
+    async () => {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 3_000)
+      })
+      lc.reset()
+    },
+    lc.fetchNextPage(),
+  ])
+} catch (err) {
+  if (!(err instanceof LuckyCafeCancelled)) throw err
+}
 ```
